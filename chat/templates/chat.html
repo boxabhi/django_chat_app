@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block start %}
+<div class="container py-5 px-4">
+    <!-- For demo purpose-->
+    <header class="text-center">
+        <h1 class="display-4 text-white"> Chat</h1>
+
+    </header>
+
+
+    <div class="row overflow-hidden" id="people_online">
+
+    </div>
+
+    <div class="row rounded-lg overflow-hidden shadow">
+        <!-- Users box-->
+
+        <!-- Chat Box-->
+        <div class="col-12 px-0">
+            <div class="px-4 py-5 chat-box bg-white" id="chat_ui">
+              
+
+            </div>
+
+            <!-- Typing area -->
+            <div action="#" class="bg-light">
+                <div class="input-group">
+                    <input type="text" id="message" placeholder="Type a message" aria-describedby="button-addon2"
+                        class="form-control rounded-0 border-0 py-4 bg-light">
+                    <div class="input-group-append" onclick="sendMessage()">
+                        <button id="button-addon2" type="submit" class="btn btn-link">
+                             <img style="height:30px" src="https://img.icons8.com/ios/452/sent.png"></button>
+                    </div>
+                </div>
+            </dib>
+
+        </div>
+    </div>
+</div>
+
+
+<script>
+    var url = `ws://localhost:8000/ws/room/boxabhi/?user={{request.user.id}}`
+    var current_user_id = parseInt('{{request.user.id}}')
+    var socket = new WebSocket(url)
+
+    socket.onopen = function (e) {
+        console.log('Connected')
+    }
+
+    socket.onmessage = function (e) {
+        var data = JSON.parse(e.data)
+        console.log(data.payload)
+
+
+        if(data.payload.type){
+            if(data.payload.type == 'connected'){
+            add_online(data.payload)
+            }
+            else if(data.payload.type == 'disconnected'){
+                remove_online(data.payload.user_id)
+            }else if(data.payload.type == 'message'){
+                addMessageToUi(data.payload)
+            }
+
+        }
+
+        
+
+    }
+
+    socket.onclose = function (e) {
+        console.log('Disconnected')
+    }
+
+    function sendMessage(){
+
+        var text_message = document.getElementById('message').value
+
+        if(text_message.value == ''){
+            alert('message cant be null')
+            return;
+        }
+
+        socket.send(JSON.stringify({
+                'text_message': text_message
+        }))
+
+        document.getElementById('message').value = ''
+
+    }
+
+    var flag = true
+
+    function addMessageToUi(data){
+
+        var chat_ui = document.getElementById('chat_ui')
+
+        var text_message = data.text_message
+        var sender = data.sender
+
+
+        if(flag){
+            chat_ui.innerHTML += `<div class="media w-100 mb-3">
+                    <div class="media-body ml-3">
+                        <div class="bg-light rounded py-2 px-3 mb-2">
+                            <p class="text-small mb-0 text-muted">
+                                ${text_message}</p>
+                        </div>
+                        <p>Sender - ${sender} </p>
+                    </div>
+                </div>`
+
+            flag = !flag
+        }else{
+            chat_ui.innerHTML += `<div class="media w-100 mb-3">
+                    <div class="media-body ml-3">
+                        <div class="bg-primary rounded py-2 px-3 mb-2">
+                            <p class="text-small mb-0 text-white">
+                                ${text_message}</p>
+                        </div>
+                        <p>Sender - ${sender} </p>
+                    </div>
+                </div>`
+
+            flag = !flag
+        }
+
+
+    }
+
+
+
+
+    function add_online(data) {
+        console.log("called")
+        var element = document.getElementById('people_online')
+        console.log(data)
+        var online_users = data.online_users
+        
+        var html  = ''
+        for(var i = 0; i < online_users.length; i++){
+            var user = online_users[i].user
+            var user_id = online_users[i].user_id
+             html += `<div class="col-md-2" id="user_online_id_${user_id}">
+            <img src="https://i.pinimg.com/originals/51/f6/fb/51f6fb256629fc755b8870c801092942.png" alt="user" width="50" class="rounded-circle">
+            <p>${user}</p>
+            </div>`
+        }
+      
+            
+
+            element.innerHTML = html
+        
+    }
+
+    function remove_online(user_id) {
+        var element = document.getElementById(`user_online_id_${user_id}`)
+        element.remove();
+    }
+</script>
+
+{% endblock %}
